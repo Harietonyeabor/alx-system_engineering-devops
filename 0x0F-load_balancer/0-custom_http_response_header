@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+TEMP_FILE="$(mktemp)"
+
+# Install Nginx
+apt-get update
+apt-get install -y nginx
+
+# Write index and 404 files
+INDEX_FILE="/var/www/html/index.html"
+INDEX_MESSAGE="Hello World"
+404_FILE="/var/www/html/404.html"
+404_MESSAGE="Ceci n'est pas une page"
+touch "$INDEX_FILE"
+echo "$INDEX_MESSAGE" > "$INDEX_FILE"
+touch "$404_FILE"
+echo "$404_MESSAGE" > "$404_FILE"
+
+# Write Nginx config file
+LISTEN_PORT="80"
+REDIRECT_URL="http://cuberule.com/"
+SERVER_NAME="$(hostname)"
+
+printf %s "%s\n" \
+    "server {" \
+    "    listen ${LISTEN_PORT} default_server;" \
+    "    listen [::]:${LISTEN_PORT} default_server;" \
+    "    add_header X-Served-By ${SERVER_NAME};" \
+    "    root /var/www/html;" \
+    "    index index.html index.htm;" \
+    "    location /redirect_me {" \
+    "        return 301 ${REDIRECT_URL};" \
+    "    }" \
+    "    error_page 404 /404.html;" \
+    "    location /404 {" \
+    "        internal;" \
+    "    }" \
+    "}" \
+> "$TEMP_FILE"
+
+# Activate Nginx config file
+mv "$TEMP_FILE" "/etc/nginx/sites-available/default"
+rm -f "/etc/nginx/sites-enabled/default"
+ln -s "/etc/nginx/sites-available/default" "/etc/nginx/sites-enabled/default"
+service nginx restart
+
+# Remove temporary file on script interrupt
+trap 'rm -f "$TEMP_FILE"' INT TERM EXIT#
+
+or
+
+!/usr/bin/env bash
+
+apt-get update
+apt-get install -y nginx
+
+mkdir -p /var/www/html
+touch /var/www/html/index.html
+echo "Hello World" > /var/www/html/index.html
+touch /var/www/html/404.html
+echo "Ceci n'est pas une page" > /var/www/html/404.html
+
+printf %s "server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    add_header X-Served-By $HOSTNAME;
+    root   /var/www/html;
+    index  index.html index.htm;
+    location /redirect_me {
+        return 301 http://cuberule.com/;
+    }
+    error_page 404 /404.html;
+    location /404 {
+      root /var/www/html;
+      internal;
+    }
+}" > /etc/nginx/sites-available/default
+
+service nginx restart
