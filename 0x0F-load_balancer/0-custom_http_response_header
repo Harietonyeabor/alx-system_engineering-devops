@@ -1,31 +1,21 @@
 #!/usr/bin/env bash
-# install nginx server and then configure it to port 80
+# Configure nginx web server with custom response header
+case 
+sudo apt-get -y update
+sudo apt-get -y install nginx
 
-sudo apt update
-sudo apt install -y nginx
-sudo ufw allow 'Nginx HTTP'
-echo "Hello World!" | sudo tee /var/www/html/index.html
-# OR
-# echo "Hello World!" > index.html
-# sudo mv index.html /var/www/html
+echo "$INDEX_COPY" | sudo tee /var/www/html/index.nginx-debian.html > /dev/null
+echo "$ERROR_COPY" | sudo tee /var/www/html/custom_404.html > /dev/null
 
-echo "Ceci n'est pas une page" > 404.html
-sudo mv 404.html /var/www/html
-echo "server {
-        listen 80 default_server;
-        listen [::]:80 default_server;
-        add_header X-Served-By $HOSTNAME;
-        root /var/www/html;
-        index index.html;
-        location /redirect_me {
-                return 301 https://www.youtube.com/watch?v=QH2-TGUlwu4;
-        }
-        error_page 404 /404.html;
-        location = /404.html{
-        internal;
-        }
-}" > default
+# config redirection
+sudo sed -i '/^\sserver_name.*/a \        rewrite ^/redirect_me https://www.youtube.com/watch?v=QH2-TGUlwu4 permanent;' /etc/nginx/sites-available/default
 
-sudo mv -f default /etc/nginx/sites-available/default
-sudo service nginx restart
+# config custom 404
+sudo sed -i '/^\slocation.*/i \        error_page 404 /custom_404.html;' /etc/nginx/sites-available/default
 
+# shellcheck disable=SC2154
+# config custom response header
+sudo sed -i '/^\slocation.*/i \        add_header X-Served-By $hostname;' /etc/nginx/sites-available/default
+
+# run server
+sudo service nginx start
