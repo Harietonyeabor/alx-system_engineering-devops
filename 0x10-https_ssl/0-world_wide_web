@@ -1,23 +1,22 @@
 #!/usr/bin/env bash
 # This is about taking a subdomain and a domain and returns information regarding the subdomain
 
-domaininfo () {
-	answer_section=$(dig "$1" | grep -A1 'ANSWER SECTION' | tail -n 1)
-
-	subdomain=$(echo "$answer_section" | awk '{print $1;}' FS=.) 
-	record_type=$(echo "$answer_section" | awk '{print $4;}')
-	ip_address=$(echo "$answer_section" | awk '{print $5}')
-
-	echo "The subdomain $subdomain is a $record_type record and points to $ip_address" 
+domain_info() {
+   A=$(dig $2.$1 | awk '/ANSWER SECTION:/{getline;print;}')
+   RECORD=$(echo $A | cut -d' ' -f 4)
+   IP=$(echo $A | cut -d' ' -f 5)
+   echo "The subdomain $2 is a $RECORD record and points to $IP"
 }
 
-if [ $# -eq 1 ]
+if [ $# -lt 1 ]
 then
-	domaininfo "www.$1" 
-	domaininfo "lb-01.$1"
-	domaininfo "web-01.$1"
-	domaininfo "web-02.$1"
-elif [ $# -eq 2 ]
+    echo "Usage: 1-world_wide_web DOMAIN SUBDOMAIN(optional)"
+elif [ $# -eq 1 ]
 then
-	domaininfo "$2.$1"
+    domain_info "$1" "www"
+    domain_info "$1" "lb-01"
+    domain_info "$1" "web-01"
+    domain_info "$1" "web-02"
+else
+    domain_info "$1" "$2"
 fi
